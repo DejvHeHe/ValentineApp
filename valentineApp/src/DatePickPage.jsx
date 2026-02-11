@@ -4,6 +4,8 @@ import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
+const webhookUrl = import.meta.env.VITE_DISCORD_WEBHOOK;
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -47,7 +49,7 @@ function DatePickPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
 
     const finalFood = foodOptions
@@ -57,6 +59,36 @@ function DatePickPage() {
     const finalAct = activityOptions
       .filter(a => selectedActivity.includes(a.id))
       .map(a => a.label.split(' ')[0]);
+
+      if (!webhookUrl) {
+        console.error("Webhook URL nenalezena! Zkontroluj .env soubor.");
+        return;
+      }
+
+
+      const discordMessage = {
+        embeds: [{
+          title: "💖 Nový plán na rande! 💖",
+          description: "Někdo právě vyplnil valentýnský formulář!",
+          color: 0xff69b4, // Růžová barva v hex (decimálně)
+          fields: [
+            { name: "Mňamky k jídlu 🍕", value: finalFood.join("\n") || "Nic nevybráno", inline: true },
+            { name: "Aktivity 🎮", value: finalAct.join("\n") || "Nic nevybráno", inline: true }
+          ],
+          footer: { text: "Valentýn 2026 🌹" },
+          timestamp: new Date()
+        }]
+      };
+
+      try {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(discordMessage)
+        });
+      } catch (err) {
+        console.error("Nepodařilo se poslat zprávu na Discord", err);
+      }
 
     Swal.fire({
       title: 'Perfektní plán! ❤️',
