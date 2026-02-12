@@ -22,7 +22,8 @@ const itemVariants = {
 function DatePickPage() {
   const navigate = useNavigate();
 
-  const [selectedFood, setSelectedFood] = useState([]);
+  // Změna: selectedFood už není pole [], ale null (pro jeden výběr)
+  const [selectedFood, setSelectedFood] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState([]);
 
   const activityOptions = [
@@ -41,68 +42,69 @@ function DatePickPage() {
     { id: 'india', label: 'Indická 🍛' }
   ];
 
-  const toggleSelection = (id, state, setState) => {
-    if (state.includes(id)) {
-      setState(state.filter((item) => item !== id));
+  // Funkce pro aktivity (zůstává stejná - více výběrů)
+  const toggleActivity = (id) => {
+    if (selectedActivity.includes(id)) {
+      setSelectedActivity(selectedActivity.filter((item) => item !== id));
     } else {
-      setState([...state, id]);
+      setSelectedActivity([...selectedActivity, id]);
     }
   };
 
-  const handleSubmit = async(e) => {
+  // Nová funkce pro jídlo (přepíná jen jeden výběr)
+  const selectOnlyOneFood = (id) => {
+    setSelectedFood(id === selectedFood ? null : id);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const finalFood = foodOptions
-      .filter(f => selectedFood.includes(f.id))
-      .map(f => f.label.split(' ')[0]);
+    // Najdeme popisek pro to jedno vybrané jídlo
+    const chosenFoodLabel = foodOptions.find(f => f.id === selectedFood)?.label.split(' ')[0] || "Nic";
 
     const finalAct = activityOptions
       .filter(a => selectedActivity.includes(a.id))
       .map(a => a.label.split(' ')[0]);
 
-      if (!webhookUrl) {
-        console.error("Webhook URL nenalezena! Zkontroluj .env soubor.");
-        return;
-      }
+    if (!webhookUrl) {
+      console.error("Webhook URL nenalezena!");
+      return;
+    }
 
+    const discordMessage = {
+      embeds: [{
+        title: "💖 Nový plán na rande! 💖",
+        color: 0xff69b4,
+        fields: [
+          { name: "Mňamka k jídlu 🍕", value: chosenFoodLabel, inline: true },
+          { name: "Aktivity 🎮", value: finalAct.join(", ") || "Nic nevybráno", inline: true }
+        ],
+        footer: { text: "Valentýn 2026 🌹" },
+        timestamp: new Date()
+      }]
+    };
 
-      const discordMessage = {
-        embeds: [{
-          title: "💖 Nový plán na rande! 💖",
-          description: "Někdo právě vyplnil valentýnský formulář!",
-          color: 0xff69b4, // Růžová barva v hex (decimálně)
-          fields: [
-            { name: "Mňamky k jídlu 🍕", value: finalFood.join("\n") || "Nic nevybráno", inline: true },
-            { name: "Aktivity 🎮", value: finalAct.join("\n") || "Nic nevybráno", inline: true }
-          ],
-          footer: { text: "Valentýn 2026 🌹" },
-          timestamp: new Date()
-        }]
-      };
-
-      try {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(discordMessage)
-        });
-      } catch (err) {
-        console.error("Nepodařilo se poslat zprávu na Discord", err);
-      }
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(discordMessage)
+      });
+    } catch (err) {
+      console.error("Discord error:", err);
+    }
 
     Swal.fire({
       title: 'Perfektní plán! ❤️',
-      html: `Budeme baštit: <b>${finalFood.join(", ")}</b> <br> a dělat: <b>${finalAct.join(", ")}</b>.`,
+      html: `Budeme baštit: <b>${chosenFoodLabel}</b> <br> a dělat: <b>${finalAct.join(", ")}</b>.`,
       confirmButtonText: 'Už se těším! ✨',
       confirmButtonColor: '#ff69b4',
       backdrop: `rgba(255, 182, 193, 0.4)`,
-      customClass: {
-        container: 'valentyn-backdrop' 
-      }
+      customClass: { container: 'valentyn-backdrop' }
     }).then(() => {
       navigate('/');
     });
-  }; 
+  };
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
@@ -110,7 +112,7 @@ function DatePickPage() {
 
       <form onSubmit={handleSubmit}>
         <section style={{ marginBottom: '30px' }}>
-          <h3>Co budeme baštit? (vyber klidně víc)</h3>
+          <h3>Co budeme baštit? (vyber jedno)</h3>
           <motion.div 
             style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}
             variants={containerVariants} 
@@ -124,14 +126,15 @@ function DatePickPage() {
                 variants={itemVariants}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => toggleSelection(food.id, selectedFood, setSelectedFood)}
+                onClick={() => selectOnlyOneFood(food.id)}
                 style={{
                   padding: '10px 20px',
                   borderRadius: '15px',
                   border: '2px solid #ff69b4',
                   cursor: 'pointer',
-                  backgroundColor: selectedFood.includes(food.id) ? '#ff69b4' : 'white',
-                  color: selectedFood.includes(food.id) ? 'white' : '#ff69b4',
+                  // Kontrola, zda je jídlo vybrané (teď už není přes .includes)
+                  backgroundColor: selectedFood === food.id ? '#ff69b4' : 'white',
+                  color: selectedFood === food.id ? 'white' : '#ff69b4',
                   fontWeight: 'bold',
                   transition: '0.3s'
                 }}
@@ -143,7 +146,7 @@ function DatePickPage() {
         </section>
 
         <section style={{ marginBottom: '40px' }}>
-          <h3>A co budeme dělat?</h3>
+          <h3>A co budeme dělat? (klidně víc)</h3>
           <motion.div 
             style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}
             variants={containerVariants} 
@@ -157,7 +160,7 @@ function DatePickPage() {
                 variants={itemVariants}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => toggleSelection(act.id, selectedActivity, setSelectedActivity)}
+                onClick={() => toggleActivity(act.id)}
                 style={{
                   padding: '10px 20px',
                   borderRadius: '15px',
@@ -177,15 +180,16 @@ function DatePickPage() {
 
         <button 
           type="submit" 
-          disabled={selectedFood.length === 0 || selectedActivity.length === 0}
+          // Tlačítko se povolí, pokud je vybráno přesně jedno jídlo a aspoň jedna aktivita
+          disabled={!selectedFood || selectedActivity.length === 0}
           style={{
             padding: '15px 40px',
             fontSize: '1.2rem',
-            backgroundColor: (selectedFood.length > 0 && selectedActivity.length > 0) ? '#ff1493' : '#cccccc',
+            backgroundColor: (selectedFood && selectedActivity.length > 0) ? '#ff1493' : '#cccccc',
             color: 'white',
             border: 'none',
             borderRadius: '30px',
-            cursor: (selectedFood.length > 0 && selectedActivity.length > 0) ? 'pointer' : 'not-allowed',
+            cursor: (selectedFood && selectedActivity.length > 0) ? 'pointer' : 'not-allowed',
             boxShadow: '0 4px 15px rgba(255, 20, 147, 0.3)'
           }}
         >

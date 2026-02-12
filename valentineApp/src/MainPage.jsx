@@ -34,7 +34,16 @@ function MainPage() {
 
   return (
     <>
-      <div>
+      <div style={{backgroundColor: '#ffdae9', 
+          minWidth: '100vw',        
+          minHeight: '100vh',       
+          display: 'flex',          
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          margin: 0,
+          padding: 0}}
+        >
           <h1>Valentýnka hihihi❤️❤️❤️</h1>
           <label>Chceš být moje Valentýnka? </label>
           
